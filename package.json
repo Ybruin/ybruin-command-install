@@ -1,0 +1,28 @@
+{
+  "name": "ybruin-command-install",
+  "description": "ybruin install command.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Ybruin Team"
+  },
+  "keywords": [
+    "ybruin"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ybruin/ybruin-command-install.git"
+  },
+  "engines": {
+    "node": ">= 0.8.0"
+  },
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha test/ut --recursive"
+  },
+  "dependencies": {
+    "request": "^2.48.0"
+  },
+  "bugs": {
+    "url": "https://github.com/Ybruin/ybruin-command-install/issues"
+  }
+}
