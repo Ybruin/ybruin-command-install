@@ -31,7 +31,7 @@ exports.register = function(commander) {
                 throw new Error('missing `components.json`');
             } else {
                 var json = require(path.resolve(config));
-                var commonsGitPath = 'https://raw.githubusercontent.com/Ybruin/ybruin-components/master/commons/';
+                var commonsGitPath = 'http://res.cont.yy.com/components/commons/';
                 //删除目录
                 deleteFolderRecursive(compFolder);
                 //commons组件
@@ -62,7 +62,7 @@ exports.register = function(commander) {
                     //依赖组件
                 for (var compName in json) {
                     (function(compName) {
-                        var compGitPath = 'https://raw.githubusercontent.com/Ybruin/ybruin-components/master/' + compName + '/' + json[compName] + '/';
+                        var compGitPath = 'http://res.cont.yy.com/components/' + compName + '/' + json[compName] + '/';
                         request(compGitPath + 'component.json', function(error, response, body) {
                             if (!error && response.statusCode == 200) {
                                 !exists(compFolder) && fs.mkdirSync(compFolder);
