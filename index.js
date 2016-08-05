@@ -6,8 +6,9 @@ exports.desc = 'install components';
 
 var fs = require('fs');
 var path = require('path');
+var url = require('url');
 var request = require('request');
-var stream = process.stdout;
+var log = require('./lib/log.js');
 var exists = fs.existsSync;
 var write = fs.writeFileSync;
 var compFolder = path.resolve('components');
@@ -30,61 +31,69 @@ exports.register = function(commander) {
             if (!exists(config)) {
                 throw new Error('missing `components.json`');
             } else {
-                var json = require(path.resolve(config));
-                var commonsGitPath = 'http://res.cont.yy.com/components/commons/';
+                var configData = require(path.resolve(config));
+                var compUrl = configData.url;
+                var compDeps = configData.deps;
+                var commonsOnlinePath = url.resolve(compUrl, 'commons/');
                 //删除目录
                 deleteFolderRecursive(compFolder);
                 //commons组件
-                request(commonsGitPath + 'component.json', function(error, response, body) {
-                        if (!error && response.statusCode == 200) {
-                            !exists(compFolder) && fs.mkdirSync(compFolder);
-                            var files = JSON.parse(body).files;
-                            var commonsPath = path.join(compFolder, 'commons');
-                            !exists(commonsPath) && files.length > 0 && fs.mkdirSync(commonsPath);
-                            files.forEach(function(item) {
-                                request
-                                    .get(commonsGitPath + item)
-                                    .on('response', function(res) {
-                                        if (res.statusCode != 200) {
-                                            stream.write('commons/' + item + '  下载失败\n'.red.bold);
-                                        }
-                                    })
-                                    .on('error', function(err) {
-                                        console.log(err);
-                                    })
-                                    .on('end', function() {
-                                        stream.write('commons/' + item + '  下载完成\n'.green.bold);
-                                    })
-                                    .pipe(fs.createWriteStream(path.join(commonsPath, item)))
-                            })
-                        }
-                    })
+                var commonsJson = url.resolve(commonsOnlinePath, 'component.json');
+                request(commonsJson, function(error, response, body) {
+                    if (!error && response.statusCode == 200) {
+                        !exists(compFolder) && fs.mkdirSync(compFolder);
+                        var files = JSON.parse(body).files;
+                        var commonsLocalPath = path.join(compFolder, 'commons');
+                        !exists(commonsLocalPath) && files.length > 0 && fs.mkdirSync(commonsLocalPath);
+                        files.forEach(function(item) {
+                            request
+                                .get(url.resolve(commonsOnlinePath, item))
+                                .on('response', function(res) {
+                                    if (res.statusCode != 200) {
+                                        log.error('commons/' + item + '  下载失败'.red);
+                                    }
+                                })
+                                .on('error', function(err) {
+                                    console.log(err);
+                                })
+                                .on('end', function() {
+                                    log.notice('commons/' + item + '  下载成功'.green);
+                                })
+                                .pipe(fs.createWriteStream(path.join(commonsLocalPath, item)))
+                        })
+                    } else {
+                        log.error(error || response.statusCode)
+                    }
+                })
                     //依赖组件
-                for (var compName in json) {
+                for (var compName in compDeps) {
                     (function(compName) {
-                        var compGitPath = 'http://res.cont.yy.com/components/' + compName + '/' + json[compName] + '/';
-                        request(compGitPath + 'component.json', function(error, response, body) {
+                        var compOnlinePath = url.resolve(compUrl, path.join(compName, compDeps[compName], '/'));
+                        var compJson = url.resolve(compOnlinePath, 'component.json');
+                        request(compJson, function(error, response, body) {
                             if (!error && response.statusCode == 200) {
                                 !exists(compFolder) && fs.mkdirSync(compFolder);
-                                var compPath = path.join(compFolder, compName);
+                                var compLocalPath = path.join(compFolder, compName);
                                 var files = JSON.parse(body).files;
-                                !exists(compPath) && files.length > 0 && fs.mkdirSync(compPath);
+                                !exists(compLocalPath) && files.length > 0 && fs.mkdirSync(compLocalPath);
                                 files.forEach(function(item) {
                                     request
-                                        .get(compGitPath + item)
+                                        .get(url.resolve(compOnlinePath, item))
                                         .on('response', function(res) {
                                             if (res.statusCode != 200) {
-                                                stream.write(compName + '/' + item + '  下载失败\n'.red.bold);
+                                                log.error(compName + '/' + item + '  下载失败'.red);
                                             }
                                         })
                                         .on('error', function(err) {
                                             console.log(err);
                                         })
                                         .on('end', function() {
-                                            stream.write(compName + '/' + item + '  下载完成\n'.green.bold);
+                                            log.notice(compName + '/' + item + '  下载成功'.green);
                                         })
-                                        .pipe(fs.createWriteStream(path.join(compPath, item)))
+                                        .pipe(fs.createWriteStream(path.join(compLocalPath, item)))
                                 })
+                            } else {
+                                log.error(error || response.statusCode)
                             }
                         })
                     })(compName)
